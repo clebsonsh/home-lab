@@ -1,0 +1,105 @@
+# ==========================================
+# Templates Reutilizáveis (YAML Anchors)
+# ==========================================
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-common-env: &common-env
+  PUID: ${PUID}
+  PGID: ${PGID}
+  TZ: ${TZ}
+
+# ==========================================
+# Serviços
+# ==========================================
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    ports:
+      - "8096:8096"
+    user: "${PUID}:${PGID}"
+    group_add:
+      - "991"
+    volumes:
+      - jellyfin_config:/config
+      - jellyfin_cache:/cache
+      - type: bind
+        source: ${MEDIA_PATH}
+        target: /media
+    restart: unless-stopped
+    logging: *default-logging
+
+  adguardhome:
+    image: adguard/adguardhome:latest
+    container_name: adguardhome
+    network_mode: 'host'
+    volumes:
+      - adguard_work:/opt/adguardhome/work
+      - adguard_conf:/opt/adguardhome/conf
+    restart: unless-stopped
+    logging: *default-logging
+
+  transmission:
+    image: lscr.io/linuxserver/transmission:latest
+    container_name: transmission
+    ports:
+      - "9091:9091"
+      - "51413:51413"
+      - "51413:51413/udp"
+    environment:
+      <<: *common-env
+      USER: ${TRANSMISSION_USER}
+      PASS: ${TRANSMISSION_PASS}
+    volumes:
+      - transmission_config:/config
+      - type: bind
+        source: ${MEDIA_PATH}
+        target: /media
+    restart: unless-stopped
+    logging: *default-logging
+
+  homarr:
+    image: ghcr.io/homarr-labs/homarr:latest
+    container_name: homarr
+    ports:
+      - "7575:7575"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - homarr_appdata:/appdata
+    environment:
+      SECRET_ENCRYPTION_KEY: ${HOMARR_SECRET_KEY}
+    restart: unless-stopped
+    logging: *default-logging
+
+  tinymediamanager:
+    image: jlesage/tinymediamanager:latest
+    container_name: tinymediamanager
+    ports:
+      - "5800:5800"
+    profiles:
+      - manual
+    environment:
+      <<: *common-env
+    volumes:
+      - tmm_config:/config
+      - type: bind
+        source: ${MEDIA_PATH}
+        target: /media
+    restart: unless-stopped
+    logging: *default-logging
+
+# ==========================================
+# Declaração dos Named Volumes
+# ==========================================
+volumes:
+  jellyfin_config:
+  jellyfin_cache:
+  adguard_work:
+  adguard_conf:
+  transmission_config:
+  homarr_appdata:
+  tmm_config:
