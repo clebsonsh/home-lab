@@ -1,4 +1,3 @@
-```markdown
 # Home Server — Stack Docker
 
 Infraestrutura local gerenciada via Docker Compose e `Makefile` para mídia, downloads, bloqueio de anúncios na rede e painel de controle.
